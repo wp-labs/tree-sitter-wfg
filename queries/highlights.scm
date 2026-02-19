@@ -57,8 +57,8 @@
 (inject_block rule: (identifier) @function)
 
 ; ── Field override name ──
-(field_override name: (identifier) @property)
-(field_override name: (quoted_identifier) @property)
+(field_override name: (field_name (identifier) @property))
+(field_override name: (field_name (quoted_identifier) @property))
 
 ; ── Gen function name ──
 (gen_func function: (identifier) @function.builtin)
