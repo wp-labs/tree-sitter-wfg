@@ -15,9 +15,7 @@
 #define EXTERNAL_TOKEN_COUNT 0
 #define FIELD_COUNT 14
 #define MAX_ALIAS_SEQUENCE_LENGTH 12
-#define MAX_RESERVED_WORD_SET_SIZE 0
 #define PRODUCTION_ID_COUNT 11
-#define SUPERTYPE_COUNT 0
 
 enum ts_symbol_identifiers {
   sym_identifier = 1,
@@ -541,7 +539,7 @@ static const char * const ts_field_names[] = {
   [field_window] = "window",
 };
 
-static const TSMapSlice ts_field_map_slices[PRODUCTION_ID_COUNT] = {
+static const TSFieldMapSlice ts_field_map_slices[PRODUCTION_ID_COUNT] = {
   [1] = {.index = 0, .length = 1},
   [2] = {.index = 1, .length = 2},
   [3] = {.index = 3, .length = 2},
@@ -2468,7 +2466,7 @@ extern "C" {
 
 TS_PUBLIC const TSLanguage *tree_sitter_wfg(void) {
   static const TSLanguage language = {
-    .abi_version = LANGUAGE_VERSION,
+    .version = LANGUAGE_VERSION,
     .symbol_count = SYMBOL_COUNT,
     .alias_count = ALIAS_COUNT,
     .token_count = TOKEN_COUNT,
@@ -2490,7 +2488,7 @@ TS_PUBLIC const TSLanguage *tree_sitter_wfg(void) {
     .public_symbol_map = ts_symbol_map,
     .alias_map = ts_non_terminal_alias_map,
     .alias_sequences = &ts_alias_sequences[0][0],
-    .lex_modes = (const void*)ts_lex_modes,
+    .lex_modes = ts_lex_modes,
     .lex_fn = ts_lex,
     .keyword_lex_fn = ts_lex_keywords,
     .keyword_capture_token = sym_identifier,
