@@ -1,76 +1,51 @@
 ; WFG Syntax Highlighting (tree-sitter native)
 
-; ── Keywords ──
 [
   "use"
   "scenario"
-  "seed"
-  "time"
-  "duration"
-  "total"
+  "traffic"
   "stream"
-  "inject"
-  "for"
-  "on"
-  "faults"
-  "oracle"
+  "gen"
+  "wave"
+  "burst"
+  "timeline"
+  "injection"
+  "seq"
+  "with"
+  "expect"
 ] @keyword
 
-; ── Mode keywords ──
-(mode_keyword) @keyword
+[
+  "hit"
+  "near_miss"
+  "miss"
+] @keyword
 
-; ── Boolean ──
-(boolean) @constant.builtin
+[
+  "base"
+  "amp"
+  "period"
+  "shape"
+  "peak"
+  "every"
+  "hold"
+] @property
 
-; ── Operators / Delimiters ──
-[ "=" ] @operator
-[ "(" ")" "{" "}" "[" "]" ] @punctuation.bracket
-[ "," ";" ":" ] @punctuation.delimiter
-
-; ── Comments ──
 (comment) @comment
-
-; ── String literals ──
 (string) @string
-
-; ── Number literals ──
 (number) @number
-
-; ── Duration ──
 (duration) @number
-
-; ── Rate ──
-(rate) @number
-
-; ── Percent ──
+(rate_constant) @number
 (percent) @number
+(boolean) @constant.builtin
+(wave_shape) @constant.builtin
 
-; ── Scenario name ──
 (scenario_declaration name: (identifier) @function.definition)
+(annotation_item key: (identifier) @property)
+(stream_statement stream: (identifier) @variable)
+(injection_case stream: (identifier) @variable)
+(sequence_block entity: (identifier) @variable)
+(predicate key: (identifier) @property)
+(expect_statement rule: (identifier) @function)
 
-; ── Stream alias and window ──
-(stream_block
-  alias: (identifier) @variable
-  window: (identifier) @type)
-
-; ── Inject rule target ──
-(inject_block rule: (identifier) @function)
-
-; ── Field override name ──
-(field_override name: (field_name (identifier) @property))
-(field_override name: (field_name (quoted_identifier) @property))
-
-; ── Gen function name ──
-(gen_func function: (identifier) @function.builtin)
-
-; ── Named arg key ──
-(named_arg key: (identifier) @property)
-
-; ── Param assign key ──
-(param_assign key: (identifier) @property)
-
-; ── Fault name ──
-(fault_line name: (identifier) @variable)
-
-; ── Plain identifier (fallback, must be last) ──
 (identifier) @variable

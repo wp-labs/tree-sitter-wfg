@@ -9,134 +9,175 @@ module.exports = grammar({
 
   rules: {
     source_file: ($) =>
-      seq(repeat($.use_declaration), $.scenario_declaration),
+      seq(
+        repeat($.use_declaration),
+        optional($.scenario_attributes),
+        $.scenario_declaration,
+      ),
 
-    // ── Comments ──
     comment: (_$) => token(seq("//", /.*/)),
 
-    // ── Use declarations ──
-    use_declaration: ($) => seq("use", $.string),
+    use_declaration: ($) => seq("use", field("path", $.string)),
 
-    // ── Scenario declaration ──
+    scenario_attributes: ($) => seq("#[", $.annotation_list, "]"),
+
     scenario_declaration: ($) =>
       seq(
         "scenario",
         field("name", $.identifier),
-        "seed",
-        field("seed", $.number),
+        optional(seq("<", field("params", $.annotation_list), ">")),
         "{",
-        $.time_clause,
-        $.total_clause,
-        repeat($.stream_block),
-        repeat($.inject_block),
-        optional($.faults_block),
-        optional($.oracle_block),
+        $.traffic_block,
+        optional($.injection_block),
+        optional($.expect_block),
         "}",
       ),
 
-    // ── Time clause ──
-    time_clause: ($) =>
-      seq("time", field("start", $.string), "duration", field("dur", $.duration)),
+    annotation_list: ($) =>
+      seq($.annotation_item, repeat(seq(",", $.annotation_item))),
 
-    // ── Total clause ──
-    total_clause: ($) => seq("total", field("count", $.number)),
+    annotation_item: ($) =>
+      seq(field("key", $.identifier), "=", field("value", $.value)),
 
-    // ── Stream block ──
-    stream_block: ($) =>
+    traffic_block: ($) => seq("traffic", "{", repeat($.stream_statement), "}"),
+
+    stream_statement: ($) =>
       seq(
         "stream",
-        field("alias", $.identifier),
-        ":",
-        field("window", $.identifier),
-        field("rate", $.rate),
-        optional(seq("{", repeat($.field_override), "}")),
+        field("stream", $.identifier),
+        "gen",
+        field("rate", $.rate_expression),
       ),
 
-    // ── Field override ──
-    field_override: ($) =>
-      seq(
-        field("name", $.field_name),
-        "=",
-        field("value", $.gen_expr),
+    rate_expression: ($) =>
+      choice(
+        $.rate_constant,
+        $.wave_expression,
+        $.burst_expression,
+        $.timeline_expression,
       ),
 
-    field_name: ($) => choice($.quoted_identifier, $.identifier),
+    rate_constant: (_$) => token(/\d+(\.\d+)?\/s/),
 
-    quoted_identifier: (_$) => token(seq("`", /[^`]+/, "`")),
-
-    // ── Gen expression ──
-    gen_expr: ($) => choice($.gen_func, $.literal),
-
-    gen_func: ($) =>
+    wave_expression: ($) =>
       seq(
-        field("function", $.identifier),
+        "wave",
         "(",
-        optional(seq($._gen_arg, repeat(seq(",", $._gen_arg)))),
+        "base",
+        "=",
+        field("base", $.rate_constant),
+        ",",
+        "amp",
+        "=",
+        field("amp", $.rate_constant),
+        ",",
+        "period",
+        "=",
+        field("period", $.duration),
+        optional(seq(",", "shape", "=", field("shape", $.wave_shape))),
         ")",
       ),
 
-    _gen_arg: ($) => choice($.named_arg, $.string, $.number),
+    wave_shape: (_$) => choice("sine", "triangle", "square"),
 
-    named_arg: ($) =>
+    burst_expression: ($) =>
       seq(
-        field("key", $.identifier),
-        ":",
-        field("value", choice($.string, $.number)),
+        "burst",
+        "(",
+        "base",
+        "=",
+        field("base", $.rate_constant),
+        ",",
+        "peak",
+        "=",
+        field("peak", $.rate_constant),
+        ",",
+        "every",
+        "=",
+        field("every", $.duration),
+        ",",
+        "hold",
+        "=",
+        field("hold", $.duration),
+        ")",
       ),
 
-    literal: ($) => choice($.string, $.number, $.boolean),
+    timeline_expression: ($) =>
+      seq("timeline", "{", repeat($.timeline_segment), "}"),
 
-    // ── Inject block ──
-    inject_block: ($) =>
+    timeline_segment: ($) =>
       seq(
-        "inject",
-        "for",
-        field("rule", $.identifier),
-        "on",
-        $.stream_list,
+        field("start", $.duration),
+        "..",
+        field("end", $.duration),
+        "=",
+        field("rate", $.rate_constant),
+      ),
+
+    injection_block: ($) => seq("injection", "{", repeat($.injection_case), "}"),
+
+    injection_case: ($) =>
+      seq(
+        field("mode", $.mode_keyword),
+        "<",
+        field("percent", $.percent),
+        ">",
+        field("stream", $.identifier),
         "{",
-        repeat1($.inject_line),
+        $.sequence_block,
         "}",
       ),
 
-    stream_list: ($) =>
-      seq("[", $.identifier, repeat(seq(",", $.identifier)), "]"),
+    mode_keyword: (_$) => choice("hit", "near_miss", "miss"),
 
-    inject_line: ($) =>
+    sequence_block: ($) =>
       seq(
-        field("mode", $.mode_keyword),
-        field("percent", $.percent),
-        repeat($.param_assign),
-        ";",
+        field("entity", $.identifier),
+        "seq",
+        "{",
+        $.use_statement,
+        repeat($.use_statement),
+        "}",
       ),
 
-    mode_keyword: (_$) => choice("hit", "near_miss", "non_hit"),
-
-    // ── Param assignment (shared by inject and oracle) ──
-    param_assign: ($) =>
+    use_statement: ($) =>
       seq(
-        field("key", $.identifier),
-        "=",
-        field("value", choice($.number, $.duration, $.string)),
+        "use",
+        "(",
+        field("predicates", $.predicate_list),
+        ")",
+        "with",
+        "(",
+        field("count", $.number),
+        ",",
+        field("window", $.duration),
+        ")",
       ),
 
-    // ── Faults block ──
-    faults_block: ($) =>
-      seq("faults", "{", repeat($.fault_line), "}"),
+    predicate_list: ($) => seq($.predicate, repeat(seq(",", $.predicate))),
 
-    fault_line: ($) =>
+    predicate: ($) =>
+      seq(field("key", $.identifier), "=", field("value", $.literal)),
+
+    expect_block: ($) => seq("expect", "{", repeat($.expect_statement), "}"),
+
+    expect_statement: ($) =>
       seq(
-        field("name", $.identifier),
-        field("percent", $.percent),
-        ";",
+        field("metric", $.expect_function),
+        "(",
+        field("rule", $.identifier),
+        ")",
+        field("operator", $.comparison_operator),
+        field("threshold", $.percent),
       ),
 
-    // ── Oracle block ──
-    oracle_block: ($) =>
-      seq("oracle", "{", repeat(seq($.param_assign, ";")), "}"),
+    expect_function: (_$) => choice("hit", "near_miss", "miss"),
 
-    // ── Literals ──
-    rate: (_$) => token(/\d+(\.\d+)?\/[smh]/),
+    comparison_operator: (_$) => token(choice(">=", "<=", ">", "<", "==")),
+
+    value: ($) => choice($.literal, $.duration),
+
+    literal: ($) => choice($.string, $.number, $.boolean),
 
     percent: (_$) => token(/\d+(\.\d+)?%/),
 
@@ -144,12 +185,10 @@ module.exports = grammar({
 
     number: (_$) => token(/\d+(\.\d+)?/),
 
-    string: (_$) =>
-      token(seq('"', repeat(choice(/[^"\\]/, /\\./)), '"')),
+    string: (_$) => token(seq("\"", repeat(choice(/[^"\\]/, /\\./)), "\"")),
 
     boolean: (_$) => choice("true", "false"),
 
-    // ── Identifier ──
     identifier: (_$) => /[a-zA-Z_][a-zA-Z0-9_]*/,
   },
 });

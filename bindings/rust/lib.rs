@@ -4,8 +4,11 @@
 //! tree-sitter [Parser][], and then use the parser to parse some code:
 //!
 //! ```
-//! let code = r#"
-//! "#;
+//! let code = r#"scenario smoke {
+//!   traffic {
+//!     stream auth_events gen 100/s
+//!   }
+//! }"#;
 //! let mut parser = tree_sitter::Parser::new();
 //! parser.set_language(&tree_sitter_wfg::language()).expect("Error loading Wfg grammar");
 //! let tree = parser.parse(code, None).unwrap();
